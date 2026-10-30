@@ -36,6 +36,9 @@ npx wrangler d1 migrations apply db1-aaa --local        # ทดสอบ local
 npx wrangler d1 migrations apply db1-aaa --remote       # production
 ```
 
+wrangler 4.156.0: `d1 migrations ...` ไม่อ่าน `account_id` จาก `wrangler.jsonc` ถ้าขึ้น `More than one account available`
+ให้ `export CLOUDFLARE_ACCOUNT_ID=30ec5dca725dd7acef6a6ef89342e403` ก่อน
+
 ห้ามแก้ไฟล์ migration ที่ apply ขึ้น remote แล้ว ให้สร้างไฟล์ใหม่เสมอ ห้ามลบตาราง `d1_migrations` (wrangler ใช้จำว่า apply อะไรไปแล้ว)
 
 ## Seed
