@@ -1,130 +1,78 @@
-# AAASQL — Axis Access Auto Database
+# AAASQL — Axis Auto Access Data Layer
 
-Microsoft SQL Server schema for the Project AAA intelligent residential access management platform.
+Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ แผน R2 สำหรับภาพ)
 
-## Overview
+| ส่วน | ค่า |
+|---|---|
+| D1 database | `db1-aaa` (`e69cbde0-e4b3-4986-804c-ffab15a153a7`), region APAC |
+| บัญชี Cloudflare | `30ec5dca725dd7acef6a6ef89342e403` |
+| ผู้ใช้ | Worker `aaa-api` ใน repo [AAAAPI](https://github.com/playxdev/AAAAPI) (binding `DB`) |
 
-The database supports multi-tenant gated community operations with 8 core tables:
+ภาพรวมระบบและ tech stack อยู่ที่ repo **AAACLOUDF** (`SYSTEM/aaa-system-architecture.md`)
 
-| Table            | Prefix | Key          | Purpose                        |
-|----------------- |------- |------------- |------------------------------- |
-| `tb_project`     | PRJ    | INT          | Residential projects/communities |
-| `tb_house`       | HSE    | INT          | Houses within a project         |
-| `tb_user`        | USR    | INT          | Residents and staff             |
-| `tb_vehicle`     | VEH    | INT          | Registered vehicles             |
-| `tb_device`      | DEV    | INT          | Gate devices (cameras, readers) |
-| `tb_access_log`  | ACL    | **BIGINT**   | High-volume access transaction log |
-| `tb_blacklist`   | BLK    | INT          | Blacklisted license plates      |
-| `tb_admin`       | ADM    | INT          | System administrators           |
+## โครงสร้าง
 
-## Quick Setup
-
-```sql
--- Run the full schema script against your SQL Server instance
-sqlcmd -S <server> -U <user> -P <password> -i AAASQL/docs/AAA.sql
+```
+migrations/0001_init.sql           schema ตั้งต้น (v1.1.0)
+migrations/0002_visitor_owner.sql  Visitor งานส่วนกลาง, house_code, ผูก LINE, tb_audit_log
+seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
+docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
 ```
 
-The script creates the `AAA` database (Thai_CI_AS collation), all 8 tables, indexes, and auto-update triggers.
+## Migrations
 
-## Schema Standards
+`AAAAPI/wrangler.jsonc` ชี้ `migrations_dir` มาที่ `../AAASQL/migrations` ต้อง clone ทั้งสอง repo ไว้ข้างกัน:
 
-See [`docs/STANDARD.md`](docs/STANDARD.md) for the full naming and design standard.
-
-### Every table includes:
-
-- `autoID` — `INT IDENTITY(1,1)` primary key (`BIGINT` for `tb_access_log`)
-- `[table]_id` — `NVARCHAR(50)` unique business identifier
-- `prefix` — `NVARCHAR(3)` auto-generated prefix (PRJ/HSE/USR/VEH/DEV/ACL/BLK)
-- `is_active` — `BIT` (1=active, 0=soft-deleted)
-- `is_delete` — `BIT` (0=normal, reserved)
-- `id_status` — `NVARCHAR(20)` status flag
-- `project_id` — Foreign key to `tb_project` (multi-tenancy)
-- `update_date` — `DATETIME` auto-updated via trigger
-- `update_by` — `NVARCHAR(50)` audit field
-
-### Indexing
-
-- Unique index on every `[table]_id` column
-- Composite indexes for frequent query patterns:
-  - `(project_id, license_plate)` on `tb_vehicle` and `tb_blacklist`
-  - `(project_id)` on all child tables
-  - `(access_date)` on `tb_access_log`
-
-### Triggers
-
-All 8 tables have `AFTER UPDATE` triggers that auto-set `update_date` to the current time in the SE Asia timezone.
-
-## Files
-
-| File              | Purpose                          |
-|------------------ |--------------------------------- |
-| `docs/AAA.sql`    | Full DDL script (v1.2.0)        |
-| `docs/CONCEPT.md` | Project requirements & architecture |
-| `docs/STANDARD.md`| Database naming & design standard |
-
-## Optional: Create a New Admin User
-
-This section describes how to create a new administrator account using `bcrypt` password hashing.
-
-### 1. Install `htpasswd`
-
-Install the Apache utilities package which provides the `htpasswd` command.
-
-```bash
-sudo apt update
-sudo apt install apache2-utils -y
+```
+aaa/v1/
+├── AAAAPI/
+└── AAASQL/
 ```
 
----
-
-### 2. Generate a `bcrypt` Password Hash
-
-Use the following command to generate a secure `bcrypt` hash for the admin password.
-
-```bash
-htpasswd -nbBC 10 admin password
+```sh
+cd ../AAAAPI
+npx wrangler d1 migrations create db1-aaa <name>        # สร้างไฟล์ใหม่ใน AAASQL/migrations
+npx wrangler d1 migrations apply db1-aaa --local        # ทดสอบ local
+npx wrangler d1 migrations apply db1-aaa --remote       # production
 ```
 
-Example output:
+ห้ามแก้ไฟล์ migration ที่ apply ขึ้น remote แล้ว ให้สร้างไฟล์ใหม่เสมอ ห้ามลบตาราง `d1_migrations` (wrangler ใช้จำว่า apply อะไรไปแล้ว)
 
-```text
-admin:$2y$10$KfQ8mU5VvJ5QGk7/LN9OeOujOPEwLjD3Oo4yEWDwEpr6/LkfuPWoK
+## Seed
+
+หลังเพิ่มโครงการใหม่ใน `tb_project` ต้องรัน (ไม่มี policy = ปฏิเสธทุกคน):
+
+```sh
+cd ../AAAAPI
+npx wrangler d1 execute db1-aaa --remote --file=../AAASQL/seeds/default_policy.sql
 ```
 
----
+| กลุ่ม | วิธีเข้า |
+|---|---|
+| `RESIDENT` | ANPR / RFID / QRCODE / PIN |
+| `RESIDENT_OVERDUE` | RFID / PIN |
+| `RESIDENT_OVERDUE_SEVERE` | PIN |
+| `VISITOR` | QRCODE / PIN (Guest Code) |
 
-### 3. Insert the Admin User into the Database
+## ตาราง
 
-Reset existing admin records (optional) and create a new administrator account.
+| Table | เก็บอะไร |
+|---|---|
+| `tb_project` | โครงการ / หมู่บ้าน + `policy_version` |
+| `tb_house` | บ้าน + `house_code` + `payment_status` (NORMAL / OVERDUE / OVERDUE_SEVERE) |
+| `tb_user` | ลูกบ้าน + `line_user_id` (LIFF) |
+| `tb_admin` | ผู้ดูแล (1 คน = 1 โครงการ) |
+| `tb_vehicle` | รถของลูกบ้าน |
+| `tb_device` | อุปกรณ์ SEMA + `device_secret_hash` |
+| `tb_access_log` | ทุกการตัดสินสิทธิ์ที่ไม้กั้น (`log_id` = `event_id`) |
+| `tb_blacklist` | ทะเบียนต้องห้าม |
+| `tb_visitor` | ผู้เยี่ยมชม (`house_id` NULL = งานส่วนกลาง) |
+| `tb_credential` | RFID / QRCODE / PIN / GUEST (เก็บเป็น HMAC เท่านั้น) |
+| `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
+| `tb_audit_log` | การกระทำของ Admin / ลูกบ้าน |
 
-```sql
-DELETE FROM tb_admin;
-DBCC CHECKIDENT ('tb_admin', RESEED, 0);
+## R2 (ยังไม่ได้ทำ)
 
-INSERT INTO tb_admin
-(
-    admin_id,
-    project_id,
-    admin_name,
-    admin_password,
-    admin_level,
-    update_by,
-    id_status
-)
-VALUES
-(
-    'ADM00001',
-    'PRJ00001',
-    'admin',
-    '$2y$10$KfQ8mU5VvJ5QGk7/LN9OeOujOPEwLjD3Oo4yEWDwEpr6/LkfuPWoK',
-    'ADMIN',
-    'System',
-    'ACTIVE'
-);
-```
-
-> **Note**
->
-> * Replace `PRJ00001` with the appropriate project ID.
-> * Replace `admin` and `password` with your desired username and password.
-> * Always use `bcrypt` for password storage. Never store plain text passwords in the database.
+แผน: bucket เก็บภาพรถจาก ANPR และภาพคนที่ใช้ QR / RFID / Keypad ที่ไม้กั้น
+`tb_access_log.image_url` เก็บแค่ key ของภาพใน R2 ห้ามเก็บภาพใน D1
+ต้องตกลงก่อนทำ: ใครเป็นคนอัปโหลด (SEMA หรือ AAAAPI), ระยะเวลาเก็บ (retention) และสิทธิ์ดูภาพ

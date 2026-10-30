@@ -1,18 +1,19 @@
 # 📘 AAA Database Standard Specification
 
-**Project:** Axis Auto Access (AAA)  
-**Version:** 1.1.0  
-**Status:** Standard Compliant  
-**Effective Date:** 2026-06-28
+**Project:** Axis Auto Access (AAA)
+**Version:** 2.0.0
+**Engine:** Cloudflare D1 (SQLite)
+**Effective Date:** 2026-10-30
 
 ---
 
 ## 1. 🏁 Core Philosophy
 
-1. **Multi-Tenant Ready:** Every table associated with a project must include a `project_id` field to support future expansion across multiple villages, residential communities, or buildings.
-2. **Standardized Identity:** `autoID` (INT Identity) must always be used as the primary key.
-3. **Consistency:** All tables must contain the 8 common fields to support a standardized Audit Trail system.
-4. **Security First:** Passwords must never be stored in plain text. Always use `bcrypt` for password hashing.
+1. **Multi-Tenant Ready:** ทุกตารางที่เกี่ยวกับโครงการต้องมี `project_id` และทุก query ของ API ต้องกรองด้วย `project_id` ที่มาจาก token
+2. **Standardized Identity:** `autoID INTEGER PRIMARY KEY AUTOINCREMENT` เป็น primary key เสมอ
+3. **Consistency:** ทุกตารางหลักมี common fields ตามข้อ 3 เพื่อ audit trail
+4. **Security First:** ห้ามเก็บรหัสผ่าน / PIN / RFID / QR / secret แบบ plaintext (ดูข้อ 5.1)
+5. **Migrations Only:** แก้ schema ผ่านไฟล์ใน `migrations/` เท่านั้น ห้ามแก้ไฟล์ที่ apply ขึ้น remote แล้ว
 
 ---
 
@@ -21,94 +22,81 @@
 | Object Type | Naming Pattern | Example |
 | :--- | :--- | :--- |
 | **Table** | `tb_` + `snake_case` | `tb_project`, `tb_user`, `tb_access_log` |
-| **Primary Key** | `autoID` | `autoID` (INT Identity 1,1) |
-| **Business ID** | `[table_name]_id` | `project_id`, `user_id` |
+| **Primary Key** | `autoID` | `autoID INTEGER PRIMARY KEY AUTOINCREMENT` |
+| **Business ID** | `[table_name]_id` | `project_id`, `user_id` (UUID หรือรหัสที่ admin กำหนด) |
 | **Admin Table Fields** | `admin_` + `field_name` | `admin_id`, `admin_name`, `admin_password`, `admin_level` |
 | **Foreign Key** | `[ref_table]_id` | `project_id`, `house_id` |
+| **Index** | `IX_` / `UX_` (unique) + table + columns | `IX_tb_vehicle_project_license` |
+| **Trigger** | `TRIG_AUTO_UPDATE_DATE_` + table | `TRIG_AUTO_UPDATE_DATE_tb_house` |
 
 ---
 
 ## 3. 🏗️ Common Fields (Main Table Standard)
 
-All main tables (Master Data and Transaction tables) must contain the following standard columns:
-
 | # | Column | Type | Default | Description |
 |:- |:------ |:---- |:------- |:---------- |
-| 1 | `autoID` | `INT IDENTITY(1,1)` | — | Primary key |
-| 2 | `prefix` | `NVARCHAR(3)` | Table-specific | Business prefix (PRJ, HSE, USR, VEH, DEV, ACL, BLK, ADM) |
-| 3 | `[table_name]_id` | `NVARCHAR(50)` | — | Unique business identifier |
-| 4 | `is_active` | `BIT` | `1` | Soft-delete flag |
-| 5 | `is_delete` | `BIT` | `0` | Reserved delete flag |
-| 6 | `id_status` | `NVARCHAR(20)` | `'ACTIVE'` | Record status |
-| 7 | `update_date` | `DATETIME` | `GETDATE()` | Auto-updated via trigger |
-| 8 | `update_by` | `NVARCHAR(50)` | `'System'` | Last modifier |
+| 1 | `autoID` | `INTEGER PRIMARY KEY AUTOINCREMENT` | — | Primary key |
+| 2 | `[table_name]_id` | `TEXT UNIQUE NOT NULL` | — | Business identifier |
+| 3 | `is_active` | `INTEGER` | `1` | Soft-delete flag (1 = active, 0 = ปิดใช้งาน) |
+| 4 | `id_status` | `TEXT` | `'ACTIVE'` | Record status เช่น `ACTIVE`, `REVOKED` |
+| 5 | `create_date` | `DATETIME` | `CURRENT_TIMESTAMP` | เวลาสร้าง (UTC) |
+| 6 | `update_date` | `DATETIME` | `CURRENT_TIMESTAMP` | อัปเดตอัตโนมัติด้วย trigger (UTC) |
 
-### Admin Table Exception
-
-The `tb_admin` table extends the standard with security-specific columns:
-
-| Column | Type | Purpose |
-|:------ |:---- |:------- |
-| `admin_name` | `NVARCHAR(50) NOT NULL UNIQUE` | Login username |
-| `admin_password` | `NVARCHAR(255) NOT NULL` | Bcrypt hashed password |
+ตาราง log (`tb_access_log`, `tb_audit_log`) เป็น append-only ไม่มี `update_date` และไม่มี trigger
 
 ---
 
 ## 4. 💾 Data Type Standards
 
-- **Money / Price:** `DECIMAL(18, 4)`
-- **Status / Flags:** `BIT` (0 or 1)
-- **Description / Remarks:** `NVARCHAR(MAX)`
-- **Timestamp:** `DATETIME` (SQL Server standard)
-- **Password:** `NVARCHAR(255)` (supports bcrypt hash length of 60 characters)
-- **Business ID:** `NVARCHAR(50)` (supports prefix + timestamp format)
-- **Login Name:** `NVARCHAR(50)` (unique, used for authentication)
+- **Status / Flags:** `INTEGER` (0 / 1)
+- **Text / ID / Description:** `TEXT`
+- **Timestamp:** `DATETIME` เก็บเป็น UTC รูปแบบ `YYYY-MM-DD HH:MM:SS` (เหมือน `CURRENT_TIMESTAMP`)
+- **Money / Price:** เก็บเป็น `INTEGER` หน่วยสตางค์ (SQLite ไม่มี DECIMAL)
+- **ทะเบียนรถ:** ตัดช่องว่างและ `-` ก่อนเก็บ (เช่น `กก9999`)
 
 ---
 
 ## 5. 🔒 Safety & Constraints
 
-### 5.1 Password Storage
+### 5.1 Secret Storage
 
-- All passwords must be stored using **bcrypt** hashing (cost factor 10).
-- Never store plain-text passwords in any table.
-- Admin accounts are created **exclusively via manual SQL** — no API endpoint exists for admin CRUD operations.
+| ข้อมูล | วิธีเก็บ |
+|---|---|
+| รหัสผ่าน Admin | PBKDF2-SHA256 100,000 รอบ: `pbkdf2_sha256$<iterations>$<salt hex>$<hash hex>` |
+| RFID / QR / PIN / Guest Code | HMAC-SHA256(`CRED_PEPPER`, `project_id:cred_type:value`) |
+| Device secret | SHA-256 hex |
+| รหัสผูก LINE | SHA-256 hex, ใช้ครั้งเดียว, หมดอายุ 24 ชม. |
+
+- Admin คนแรกสร้างด้วย SQL + `scripts/hash-password.mjs` (repo AAAAPI)
+- ห้ามบันทึกค่าลับลง `tb_access_log` / `tb_audit_log`
 
 ### 5.2 Indexing Standard
 
-- **Unique Index / Constraint:** Applied to every Business ID (`*_id`) and every login name (`admin_name`).
-- **Composite Index:** Applied to frequently queried fields, e.g. `(project_id, license_plate)`.
-- **Nonclustered Index:** Applied to all foreign key columns.
+- **Unique:** ทุก Business ID (`*_id`), `admin_name`, `(project_id, house_code)`, `(project_id, cred_type, cred_hash)`, `line_user_id`
+- **Composite:** field ที่ค้นบ่อย เช่น `(project_id, license_plate)`, `(project_id, timestamp)`
+- **Foreign Key:** ทุก FK column มี index
 
 ### 5.3 Auto Update Trigger
 
-An `AFTER UPDATE` trigger must exist on every table to automatically update `update_date`:
-
 ```sql
-CREATE OR ALTER TRIGGER TRIG_AUTO_UPDATE_DATE_{table} ON {table} AFTER UPDATE AS
-BEGIN
-    SET NOCOUNT ON;
-    UPDATE t SET update_date = CAST(SYSDATETIMEOFFSET() AT TIME ZONE 'SE Asia Standard Time' AS DATETIME)
-    FROM {table} t INNER JOIN inserted i ON t.autoID = i.autoID;
-END
-GO
+CREATE TRIGGER TRIG_AUTO_UPDATE_DATE_{table} AFTER UPDATE ON {table}
+FOR EACH ROW BEGIN UPDATE {table} SET update_date = CURRENT_TIMESTAMP WHERE autoID = OLD.autoID; END;
 ```
+
+ผลข้างเคียง: `meta.changes` ของ D1 นับแถวที่ trigger แก้ด้วย โค้ดจึงต้องเช็ค `changes > 0` ไม่ใช่ `=== 1`
 
 ---
 
 ## 📝 Change Log
 
-### v1.1.0 (2026-06-28)
+### v2.0.0 (2026-10-30)
 
-- Added `tb_admin` table with bcrypt password hashing standard.
-- Added `admin_` prefix naming convention for admin-specific fields.
-- Added `NVARCHAR(255)` type standard for password columns.
-- Added security policy: admin accounts are manual-only, no API CRUD endpoints.
-- Added unique constraint requirement on `admin_name` (login username).
+- ย้ายจาก Microsoft SQL Server ไป Cloudflare D1 (SQLite)
+- รหัสผ่าน Admin เปลี่ยนจาก bcrypt เป็น PBKDF2-SHA256 (WebCrypto บน Workers)
+- เพิ่มมาตรฐานการเก็บ credential / secret (ข้อ 5.1)
+- ตัด `prefix`, `is_delete`, `update_by` ออกจาก common fields; เพิ่ม `create_date`
+- Admin จัดการผ่าน Admin API ได้แล้ว (ยกเว้นสร้าง admin คนแรก)
 
-### v1.0.0 (Initial Standard, 2026-06-26)
+### v1.1.0 (2026-06-28) — MS SQL Server (เลิกใช้)
 
-- Established the AAA database standard.
-- Introduced the multi-tenant `project_id` structure.
-- Defined 8 standard audit columns.
-- Established naming conventions and indexing requirements.
+### v1.0.0 (2026-06-26) — MS SQL Server (เลิกใช้)
