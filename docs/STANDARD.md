@@ -1,7 +1,7 @@
 # 📘 AAA Database Standard Specification
 
 **Project:** Axis Auto Access (AAA)
-**Version:** 2.0.0
+**Version:** 2.1.0
 **Engine:** Cloudflare D1 (SQLite)
 **Effective Date:** 2026-10-30
 
@@ -53,6 +53,7 @@
 - **Timestamp:** `DATETIME` เก็บเป็น UTC รูปแบบ `YYYY-MM-DD HH:MM:SS` (เหมือน `CURRENT_TIMESTAMP`)
 - **Money / Price:** เก็บเป็น `INTEGER` หน่วยสตางค์ (SQLite ไม่มี DECIMAL)
 - **ทะเบียนรถ:** ตัดช่องว่างและ `-` ก่อนเก็บ (เช่น `กก9999`)
+- **ภาพ / ไฟล์:** เก็บใน R2 เท่านั้น ใน D1 เก็บแค่ key (เช่น `tb_access_log.image_url` = `<project_id>/<YYYY-MM-DD>/<event_id>.jpg`)
 
 ---
 
@@ -88,6 +89,10 @@ FOR EACH ROW BEGIN UPDATE {table} SET update_date = CURRENT_TIMESTAMP WHERE auto
 ---
 
 ## 📝 Change Log
+
+### v2.1.0 (2026-10-30)
+
+- เพิ่มมาตรฐานการเก็บภาพ / ไฟล์: R2 เท่านั้น D1 เก็บแค่ key (ข้อ 4)
 
 ### v2.0.0 (2026-10-30)
 

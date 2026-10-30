@@ -1,6 +1,6 @@
 # AAASQL — Axis Auto Access Data Layer
 
-Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ แผน R2 สำหรับภาพ)
+Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ R2 สำหรับภาพ: ออกแบบแล้ว ยังไม่ได้ทำ)
 
 | ส่วน | ค่า |
 |---|---|
@@ -74,8 +74,16 @@ npx wrangler d1 execute db1-aaa --remote --file=../AAASQL/seeds/default_policy.s
 | `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
 | `tb_audit_log` | การกระทำของ Admin / ลูกบ้าน |
 
-## R2 (ยังไม่ได้ทำ)
+## R2 (ออกแบบแล้ว ยังไม่ได้ทำ)
 
-แผน: bucket เก็บภาพรถจาก ANPR และภาพคนที่ใช้ QR / RFID / Keypad ที่ไม้กั้น
-`tb_access_log.image_url` เก็บแค่ key ของภาพใน R2 ห้ามเก็บภาพใน D1
-ต้องตกลงก่อนทำ: ใครเป็นคนอัปโหลด (SEMA หรือ AAAAPI), ระยะเวลาเก็บ (retention) และสิทธิ์ดูภาพ
+ออกแบบเต็มอยู่ที่ AAACLOUDF `SYSTEM/aaa-system-architecture.md` §8.6
+
+| ส่วน | ค่า |
+|---|---|
+| Bucket | `aaa-images` (private, APAC) binding `IMAGES` ใน `aaa-api` |
+| Key | `<project_id>/<YYYY-MM-DD>/<event_id>.jpg` เก็บใน `tb_access_log.image_url` ห้ามเก็บภาพใน D1 |
+| อัปโหลด | SEMA → `PUT /api/v1/access/events/:event_id/image` (Device JWT, JPEG ≤ 2 MB) |
+| Retention | 90 วัน (R2 Lifecycle Rule) |
+| ผู้ดู | Admin ของโครงการ + ลูกบ้านเฉพาะ log ของบ้านตัวเอง |
+
+ต้องเพิ่ม migration: `tb_access_log.house_id` (NULL ได้) + `IX_tb_access_log_house_date (house_id, timestamp)`
