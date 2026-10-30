@@ -1,9 +1,9 @@
 # 📘 AAA Database Standard Specification
 
 **Project:** Axis Auto Access (AAA)  
-**Version:** 1.2.0  
+**Version:** 1.1.0  
 **Status:** Standard Compliant  
-**Effective Date:** 2026-07-03
+**Effective Date:** 2026-06-28
 
 ---
 
@@ -61,7 +61,7 @@ The `tb_admin` table extends the standard with security-specific columns:
 - **Description / Remarks:** `NVARCHAR(MAX)`
 - **Timestamp:** `DATETIME` (SQL Server standard)
 - **Password:** `NVARCHAR(255)` (supports bcrypt hash length of 60 characters)
-- **Business ID:** `NVARCHAR(50)` (supports prefix + date + random hex format: `PREFIX-YYYYMMDD-XXXXXX`)
+- **Business ID:** `NVARCHAR(50)` (supports prefix + timestamp format)
 - **Login Name:** `NVARCHAR(50)` (unique, used for authentication)
 
 ---
@@ -94,37 +94,9 @@ END
 GO
 ```
 
-### 5.4 Auto ID Generation Trigger
-
-An `INSTEAD OF INSERT` trigger must exist on every table to automatically generate business IDs:
-
-```sql
-CREATE OR ALTER TRIGGER TRIG_AUTO_GENERATE_ID_{table} ON {table} INSTEAD OF INSERT AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @today NVARCHAR(8) = FORMAT(CAST(SYSDATETIMEOFFSET() AT TIME ZONE 'SE Asia Standard Time' AS DATE), 'yyyyMMdd');
-    DECLARE @random NVARCHAR(6) = LOWER(SUBSTRING(REPLACE(CONVERT(NVARCHAR(36), NEWID()), '-', ''), 1, 6));
-
-    INSERT INTO {table} (...)
-    SELECT '{PREFIX}', '{PREFIX}-' + @today + '-' + @random, ... FROM inserted;
-END
-GO
-```
-
-**Format:** `{PREFIX}-YYYYMMDD-XXXXXX` where `XXXXXX` = 6 random hex characters from `NEWID()`.
-
-**Application integration:** Application code must pass an empty string (`''`) for the ID column. The trigger generates the real value. Use `OUTPUT INSERTED.{table}_id` to capture the generated ID back.
-
 ---
 
 ## 📝 Change Log
-
-### v1.2.0 (2026-07-03)
-
-- Added `INSTEAD OF INSERT` triggers for auto-generating business IDs on all 8 tables.
-- Changed business ID format from `{PREFIX}-YYYYMMDDHHmmss` to `{PREFIX}-YYYYMMDD-XXXXXX` (date + 6 random hex chars from `NEWID()`).
-- Application code no longer generates IDs — database triggers handle it exclusively.
 
 ### v1.1.0 (2026-06-28)
 

@@ -52,8 +52,7 @@ See [`docs/STANDARD.md`](docs/STANDARD.md) for the full naming and design standa
 
 ### Triggers
 
-- **AFTER UPDATE (8 triggers)** — Auto-set `update_date` to the current time in the SE Asia timezone.
-- **INSTEAD OF INSERT (8 triggers)** — Auto-generate business IDs with format `{PREFIX}-YYYYMMDD-XXXXXX` where `XXXXXX` is 6 random hex characters from `NEWID()`. Application code must pass an empty string for the ID column; the trigger generates the real value.
+All 8 tables have `AFTER UPDATE` triggers that auto-set `update_date` to the current time in the SE Asia timezone.
 
 ## Files
 
@@ -114,8 +113,8 @@ INSERT INTO tb_admin
 )
 VALUES
 (
-    '',                          -- trigger auto-generates: ADM-YYYYMMDD-XXXXXX
-    'PRJ-20260628-a1b2c3',
+    'ADM00001',
+    'PRJ00001',
     'admin',
     '$2y$10$KfQ8mU5VvJ5QGk7/LN9OeOujOPEwLjD3Oo4yEWDwEpr6/LkfuPWoK',
     'ADMIN',
@@ -126,7 +125,6 @@ VALUES
 
 > **Note**
 >
-> * The `admin_id` column should be passed as `''` (empty string). The `INSTEAD OF INSERT` trigger auto-generates it in the format `ADM-YYYYMMDD-XXXXXX`.
-> * Replace `PRJ-20260628-a1b2c3` with the appropriate project ID.
+> * Replace `PRJ00001` with the appropriate project ID.
 > * Replace `admin` and `password` with your desired username and password.
 > * Always use `bcrypt` for password storage. Never store plain text passwords in the database.
