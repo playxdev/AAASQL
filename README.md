@@ -15,6 +15,7 @@ Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ R2 �
 ```
 migrations/0001_init.sql           schema ตั้งต้น (v1.1.0)
 migrations/0002_visitor_owner.sql  Visitor งานส่วนกลาง, house_code, ผูก LINE, tb_audit_log
+migrations/0003_access_log_house_number.sql  tb_access_log.house_number (บ้านเลขที่ที่ตอบ SEMA)
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
 ```
