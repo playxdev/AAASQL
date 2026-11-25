@@ -17,6 +17,7 @@ migrations/0001_init.sql           schema ตั้งต้น (v1.1.0)
 migrations/0002_visitor_owner.sql  Visitor งานส่วนกลาง, house_code, ผูก LINE, tb_audit_log
 migrations/0003_access_log_house_number.sql  tb_access_log.house_number (บ้านเลขที่ที่ตอบ SEMA)
 migrations/0004_house_owned_access.sql  รถ / credential เป็นของบ้าน (house_id), occupancy_status, role ของผู้ติดต่อ
+migrations/0005_project_code.sql   tb_project.project_code (AAAA-AA11, login Admin), admin_name ห้ามซ้ำต่อโครงการ
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
@@ -46,7 +47,7 @@ wrangler 4.156.0: `d1 migrations ...` ไม่อ่าน `account_id` จา�
 
 ## Seed
 
-หลังเพิ่มโครงการใหม่ใน `tb_project` ต้องรัน (ไม่มี policy = ปฏิเสธทุกคน):
+หลังเพิ่มโครงการใหม่ใน `tb_project` (ต้องมี `project_code`, ดู AAAAPI README "สร้างโครงการ + Admin คนแรก") ต้องรัน (ไม่มี policy = ปฏิเสธทุกคน):
 
 ```sh
 cd ../AAAAPI
@@ -64,10 +65,10 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 
 | Table | เก็บอะไร |
 |---|---|
-| `tb_project` | โครงการ / หมู่บ้าน + `policy_version` |
+| `tb_project` | โครงการ (หมู่บ้าน / คอนโด / อาคาร / สถานที่) + `project_code` (`AAAA-AA11` เช่น `PROJ-0001` ใช้ login Admin, ห้ามซ้ำ) + `policy_version` |
 | `tb_house` | บ้าน + `house_code` + `payment_status` (NORMAL / OVERDUE / OVERDUE_SEVERE) + `occupancy_status` (OCCUPIED / VACANT) |
 | `tb_user` | ผู้ติดต่อของบ้าน `role` = OWNER (เจ้าบ้าน) / RESIDENT / TENANT + `line_user_id` (LIFF) ไม่มีผลต่อสิทธิ์เข้าออก |
-| `tb_admin` | ผู้ดูแล (1 คน = 1 โครงการ) |
+| `tb_admin` | ผู้ดูแล (1 คน = 1 โครงการ) `admin_name` ห้ามซ้ำเฉพาะในโครงการ |
 | `tb_vehicle` | รถของบ้าน (`house_id`) ทะเบียนเก็บแบบไม่มีช่องว่าง / ขีด + จังหวัดชื่อเต็ม |
 | `tb_device` | อุปกรณ์ SEMA + `device_secret_hash` |
 | `tb_access_log` | ทุกการตัดสินสิทธิ์ที่ไม้กั้น (`log_id` = `event_id`) |
