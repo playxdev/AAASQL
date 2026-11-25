@@ -4,7 +4,7 @@ Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ R2 �
 
 | ส่วน | ค่า |
 |---|---|
-| D1 database | `aaa-d1` (`256177bc-1cb6-449f-b5c6-f5cac2f2b046`), region APAC (เปลี่ยนชื่อจาก `db1-aaa` 2026-11-25, ตัวเก่ายังเก็บเป็น backup) |
+| D1 database | `aaa-d1` (`256177bc-1cb6-449f-b5c6-f5cac2f2b046`), region APAC (เปลี่ยนชื่อจาก `db1-aaa` 2026-11-25, ตัวเก่าลบแล้ว) |
 | บัญชี Cloudflare | `30ec5dca725dd7acef6a6ef89342e403` |
 | ผู้ใช้ | Worker `aaa-api` ใน repo [AAAAPI](https://github.com/playxdev/AAAAPI) (binding `DB`) |
 
