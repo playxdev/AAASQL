@@ -5,7 +5,7 @@
 --   RESIDENT_OVERDUE        : RFID / PIN เท่านั้น (ไม่ได้ห้ามเข้า แต่ไม่ได้ความสะดวกของ ANPR)
 --   RESIDENT_OVERDUE_SEVERE : PIN เท่านั้น (ต้องลงมากด Keypad)
 --   VISITOR                 : QRCODE / PIN (Guest Code ใช้ได้ทั้ง QR และ Keypad; ANPR ของ Visitor ต้องเปิดเองรายโครงการ)
--- รัน (จาก repo AAAAPI): npx wrangler d1 execute db1-aaa --remote --file=../AAASQL/seeds/default_policy.sql
+-- รัน (จาก repo AAAAPI): npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sql
 -- ==========================================================
 
 INSERT OR IGNORE INTO tb_policy (project_id, subject_type, method)

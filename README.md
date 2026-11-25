@@ -4,7 +4,7 @@ Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ R2 �
 
 | ส่วน | ค่า |
 |---|---|
-| D1 database | `db1-aaa` (`e69cbde0-e4b3-4986-804c-ffab15a153a7`), region APAC |
+| D1 database | `aaa-d1` (`256177bc-1cb6-449f-b5c6-f5cac2f2b046`), region APAC (เปลี่ยนชื่อจาก `db1-aaa` 2026-11-25, ตัวเก่ายังเก็บเป็น backup) |
 | บัญชี Cloudflare | `30ec5dca725dd7acef6a6ef89342e403` |
 | ผู้ใช้ | Worker `aaa-api` ใน repo [AAAAPI](https://github.com/playxdev/AAAAPI) (binding `DB`) |
 
@@ -32,9 +32,9 @@ aaa/v1/
 
 ```sh
 cd ../AAAAPI
-npx wrangler d1 migrations create db1-aaa <name>        # สร้างไฟล์ใหม่ใน AAASQL/migrations
-npx wrangler d1 migrations apply db1-aaa --local        # ทดสอบ local
-npx wrangler d1 migrations apply db1-aaa --remote       # production
+npx wrangler d1 migrations create aaa-d1 <name>        # สร้างไฟล์ใหม่ใน AAASQL/migrations
+npx wrangler d1 migrations apply aaa-d1 --local        # ทดสอบ local
+npx wrangler d1 migrations apply aaa-d1 --remote       # production
 ```
 
 wrangler 4.156.0: `d1 migrations ...` ไม่อ่าน `account_id` จาก `wrangler.jsonc` ถ้าขึ้น `More than one account available`
@@ -48,7 +48,7 @@ wrangler 4.156.0: `d1 migrations ...` ไม่อ่าน `account_id` จา�
 
 ```sh
 cd ../AAAAPI
-npx wrangler d1 execute db1-aaa --remote --file=../AAASQL/seeds/default_policy.sql
+npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sql
 ```
 
 | กลุ่ม | วิธีเข้า |
