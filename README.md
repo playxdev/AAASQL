@@ -18,6 +18,7 @@ migrations/0002_visitor_owner.sql  Visitor งานส่วนกลาง, ho
 migrations/0003_access_log_house_number.sql  tb_access_log.house_number (บ้านเลขที่ที่ตอบ SEMA)
 migrations/0004_house_owned_access.sql  รถ / credential เป็นของบ้าน (house_id), occupancy_status, role ของผู้ติดต่อ
 migrations/0005_project_code.sql   tb_project.project_code (AAAA-AA11, login Admin), admin_name ห้ามซ้ำต่อโครงการ
+migrations/0006_roles_refs_labels.sql  ROOT / ADMIN, เจ้าบ้าน 1 คนต่อบ้าน, ref, label, ผู้สร้าง credential, โครงการ PLAY-0013
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
@@ -67,14 +68,14 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 |---|---|
 | `tb_project` | โครงการ (หมู่บ้าน / คอนโด / อาคาร / สถานที่) + `project_code` (`AAAA-AA11` เช่น `PROJ-0001` ใช้ login Admin, ห้ามซ้ำ) + `policy_version` |
 | `tb_house` | บ้าน + `house_code` + `payment_status` (NORMAL / OVERDUE / OVERDUE_SEVERE) + `occupancy_status` (OCCUPIED / VACANT) |
-| `tb_user` | ผู้ติดต่อของบ้าน `role` = OWNER (เจ้าบ้าน) / RESIDENT / TENANT + `line_user_id` (LIFF) ไม่มีผลต่อสิทธิ์เข้าออก |
-| `tb_admin` | ผู้ดูแล (1 คน = 1 โครงการ) `admin_name` ห้ามซ้ำเฉพาะในโครงการ |
-| `tb_vehicle` | รถของบ้าน (`house_id`) ทะเบียนเก็บแบบไม่มีช่องว่าง / ขีด + จังหวัดชื่อเต็ม |
+| `tb_user` | คนในบ้าน `role` = OWNER (เจ้าบ้าน, 1 คนต่อบ้าน) / FAMILY / RESIDENT / TENANT + `ref` (เช่น `PROJ-0001-9806-01`, ห้ามซ้ำ) + `line_user_id` (LINE Mini App) |
+| `tb_admin` | ผู้ดูแล `admin_level` = ROOT (PlayDevX, ทุกโครงการ) / ADMIN (1 โครงการ) + `ref` (เช่น `PROJ-0001-A01`); `admin_name` ห้ามซ้ำเฉพาะในโครงการ |
+| `tb_vehicle` | รถของบ้าน (`house_id`) ทะเบียนเก็บแบบไม่มีช่องว่าง / ขีด + จังหวัดชื่อเต็ม + `label` |
 | `tb_device` | อุปกรณ์ SEMA + `device_secret_hash` |
 | `tb_access_log` | ทุกการตัดสินสิทธิ์ที่ไม้กั้น (`log_id` = `event_id`) |
 | `tb_blacklist` | ทะเบียนต้องห้าม |
 | `tb_visitor` | ผู้เยี่ยมชม (`house_id` NULL = งานส่วนกลาง) |
-| `tb_credential` | RFID / QRCODE / PIN ของบ้าน (`house_id`) หรือ GUEST ของ Visitor (`visitor_id`) เก็บเป็น HMAC เท่านั้น |
+| `tb_credential` | RFID / QRCODE / PIN ของบ้าน (`house_id`) หรือ GUEST ของ Visitor (`visitor_id`) เก็บเป็น HMAC เท่านั้น + `label` + ผู้สร้าง (`issued_by_type` / `issued_by_id`) |
 | `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
 | `tb_audit_log` | การกระทำของ Admin / ผู้ติดต่อ (LINE) |
 
