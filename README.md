@@ -20,6 +20,7 @@ migrations/0004_house_owned_access.sql  รถ / credential เป็นขอ�
 migrations/0005_project_code.sql   tb_project.project_code (AAAA-AA11, login Admin), admin_name ห้ามซ้ำต่อโครงการ
 migrations/0006_roles_refs_labels.sql  ROOT / ADMIN, เจ้าบ้าน 1 คนต่อบ้าน, ref, label, ผู้สร้าง credential, โครงการ PLAY-0013
 migrations/0007_admin_password_change.sql  tb_admin.must_change_password (บังคับเปลี่ยนรหัสหลัง Root สร้าง / รีเซ็ต)
+migrations/0008_visitor_province.sql  รถผู้มาติดต่อ (province / brand / color), tb_project.common_area_code (ค่าเริ่มต้น 0000)
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
@@ -75,7 +76,7 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 | `tb_device` | อุปกรณ์ SEMA + `device_secret_hash` |
 | `tb_access_log` | ทุกการตัดสินสิทธิ์ที่ไม้กั้น (`log_id` = `event_id`) |
 | `tb_blacklist` | ทะเบียนต้องห้าม |
-| `tb_visitor` | ผู้เยี่ยมชม (`house_id` NULL = งานส่วนกลาง) |
+| `tb_visitor` | ผู้เยี่ยมชม (`house_id` NULL = งานส่วนกลาง) + รถ (ทะเบียน / จังหวัด / ยี่ห้อ / สี) |
 | `tb_credential` | RFID / QRCODE / PIN ของบ้าน (`house_id`) หรือ GUEST ของ Visitor (`visitor_id`) เก็บเป็น HMAC เท่านั้น + `label` + ผู้สร้าง (`issued_by_type` / `issued_by_id`) |
 | `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
 | `tb_audit_log` | การกระทำของ Admin / ผู้ติดต่อ (LINE) |
