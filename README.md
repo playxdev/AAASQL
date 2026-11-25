@@ -16,7 +16,9 @@ Schema, migrations และ seed ของ AAA บน **Cloudflare D1** (+ R2 �
 migrations/0001_init.sql           schema ตั้งต้น (v1.1.0)
 migrations/0002_visitor_owner.sql  Visitor งานส่วนกลาง, house_code, ผูก LINE, tb_audit_log
 migrations/0003_access_log_house_number.sql  tb_access_log.house_number (บ้านเลขที่ที่ตอบ SEMA)
+migrations/0004_house_owned_access.sql  รถ / credential เป็นของบ้าน (house_id), occupancy_status, role ของผู้ติดต่อ
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
+seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
 ```
 
@@ -63,17 +65,17 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 | Table | เก็บอะไร |
 |---|---|
 | `tb_project` | โครงการ / หมู่บ้าน + `policy_version` |
-| `tb_house` | บ้าน + `house_code` + `payment_status` (NORMAL / OVERDUE / OVERDUE_SEVERE) |
-| `tb_user` | ลูกบ้าน + `line_user_id` (LIFF) |
+| `tb_house` | บ้าน + `house_code` + `payment_status` (NORMAL / OVERDUE / OVERDUE_SEVERE) + `occupancy_status` (OCCUPIED / VACANT) |
+| `tb_user` | ผู้ติดต่อของบ้าน `role` = OWNER (เจ้าบ้าน) / RESIDENT / TENANT + `line_user_id` (LIFF) ไม่มีผลต่อสิทธิ์เข้าออก |
 | `tb_admin` | ผู้ดูแล (1 คน = 1 โครงการ) |
-| `tb_vehicle` | รถของลูกบ้าน |
+| `tb_vehicle` | รถของบ้าน (`house_id`) ทะเบียนเก็บแบบไม่มีช่องว่าง / ขีด + จังหวัดชื่อเต็ม |
 | `tb_device` | อุปกรณ์ SEMA + `device_secret_hash` |
 | `tb_access_log` | ทุกการตัดสินสิทธิ์ที่ไม้กั้น (`log_id` = `event_id`) |
 | `tb_blacklist` | ทะเบียนต้องห้าม |
 | `tb_visitor` | ผู้เยี่ยมชม (`house_id` NULL = งานส่วนกลาง) |
-| `tb_credential` | RFID / QRCODE / PIN / GUEST (เก็บเป็น HMAC เท่านั้น) |
+| `tb_credential` | RFID / QRCODE / PIN ของบ้าน (`house_id`) หรือ GUEST ของ Visitor (`visitor_id`) เก็บเป็น HMAC เท่านั้น |
 | `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
-| `tb_audit_log` | การกระทำของ Admin / ลูกบ้าน |
+| `tb_audit_log` | การกระทำของ Admin / ผู้ติดต่อ (LINE) |
 
 ## R2 (ออกแบบแล้ว ยังไม่ได้ทำ)
 
@@ -85,6 +87,6 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 | Key | `<project_id>/<YYYY-MM-DD>/<event_id>.jpg` เก็บใน `tb_access_log.image_url` ห้ามเก็บภาพใน D1 |
 | อัปโหลด | SEMA → `PUT /api/v1/access/events/:event_id/image` (Device JWT, JPEG ≤ 2 MB) |
 | Retention | 90 วัน (R2 Lifecycle Rule) |
-| ผู้ดู | Admin ของโครงการ + ลูกบ้านเฉพาะ log ของบ้านตัวเอง |
+| ผู้ดู | Admin ของโครงการ + ผู้ติดต่อของบ้านเฉพาะ log ของบ้านตัวเอง |
 
 ต้องเพิ่ม migration: `tb_access_log.house_id` (NULL ได้) + `IX_tb_access_log_house_date (house_id, timestamp)`
