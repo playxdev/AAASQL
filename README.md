@@ -19,6 +19,7 @@ migrations/0003_access_log_house_number.sql  tb_access_log.house_number (บ้�
 migrations/0004_house_owned_access.sql  รถ / credential เป็นของบ้าน (house_id), occupancy_status, role ของผู้ติดต่อ
 migrations/0005_project_code.sql   tb_project.project_code (AAAA-AA11, login Admin), admin_name ห้ามซ้ำต่อโครงการ
 migrations/0006_roles_refs_labels.sql  ROOT / ADMIN, เจ้าบ้าน 1 คนต่อบ้าน, ref, label, ผู้สร้าง credential, โครงการ PLAY-0013
+migrations/0007_admin_password_change.sql  tb_admin.must_change_password (บังคับเปลี่ยนรหัสหลัง Root สร้าง / รีเซ็ต)
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
