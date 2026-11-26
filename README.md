@@ -21,6 +21,7 @@ migrations/0005_project_code.sql   tb_project.project_code (AAAA-AA11, login Adm
 migrations/0006_roles_refs_labels.sql  ROOT / ADMIN, เจ้าบ้าน 1 คนต่อบ้าน, ref, label, ผู้สร้าง credential, โครงการ PLAY-0013
 migrations/0007_admin_password_change.sql  tb_admin.must_change_password (บังคับเปลี่ยนรหัสหลัง Root สร้าง / รีเซ็ต)
 migrations/0008_visitor_province.sql  รถผู้มาติดต่อ (province / brand / color), tb_project.common_area_code (ค่าเริ่มต้น 0000)
+migrations/0009_access_images.sql  tb_access_log.house_id (บ้านที่เกี่ยวข้อง) + plate_image_key, รูป scene ใช้ image_url
 seeds/default_policy.sql           policy ตั้งต้นของทุกโครงการ (รันซ้ำได้)
 seeds/sample_plates.sql            ป้ายทะเบียนตัวอย่างทุกรูปแบบใน PRJ-000 (ทดสอบ ANPR, รันซ้ำได้)
 docs/STANDARD.md                   มาตรฐานการออกแบบตาราง / การเก็บ secret
@@ -81,16 +82,16 @@ npx wrangler d1 execute aaa-d1 --remote --file=../AAASQL/seeds/default_policy.sq
 | `tb_policy` | กลุ่ม × วิธีเข้า (ไม่มีแถว = ไม่อนุญาต) |
 | `tb_audit_log` | การกระทำของ Admin / ผู้ติดต่อ (LINE) |
 
-## R2 (ออกแบบแล้ว ยังไม่ได้ทำ)
+## R2 (พัฒนาแล้ว: รูป / วิดีโอยังไม่ทำ)
 
 ออกแบบเต็มอยู่ที่ AAACLOUDF `SYSTEM/aaa-system-architecture.md` §8.6
 
 | ส่วน | ค่า |
 |---|---|
 | Bucket | `aaa-images` (private, APAC) binding `IMAGES` ใน `aaa-api` |
-| Key | `<project_id>/<YYYY-MM-DD>/<event_id>.jpg` เก็บใน `tb_access_log.image_url` ห้ามเก็บภาพใน D1 |
-| อัปโหลด | SEMA → `PUT /api/v1/access/events/:event_id/image` (Device JWT, JPEG ≤ 2 MB) |
+| Key | `<project_id>/<YYYY-MM-DD>/<event_id>-scene.jpg` → `tb_access_log.image_url`, `…-plate.jpg` → `plate_image_key` ห้ามเก็บภาพใน D1 |
+| อัปโหลด | SEMA → `PUT /api/v1/access/events/:event_id/image?kind=scene\|plate` (Device JWT, JPEG ≤ 2 MB) |
 | Retention | 90 วัน (R2 Lifecycle Rule) |
-| ผู้ดู | Admin ของโครงการ + ผู้ติดต่อของบ้านเฉพาะ log ของบ้านตัวเอง |
+| ผู้ดู | Admin ของโครงการ (+ ลิงก์ที่เซ็นแล้ว 7 วันใน CSV); คนในบ้านดูรูปของบ้านตัวเอง ยังไม่ทำ |
 
-ต้องเพิ่ม migration: `tb_access_log.house_id` (NULL ได้) + `IX_tb_access_log_house_date (house_id, timestamp)`
+`tb_access_log.house_id` + `IX_tb_access_log_house_date (house_id, timestamp)` เพิ่มใน migration `0009` แล้ว
